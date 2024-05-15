@@ -2,12 +2,18 @@ import asyncHandler from "express-async-handler";
 import nodemailer from "nodemailer";
 import Template from "../modal/Template.js";
 import View from "../modal/View.js";
+import path from "path";
 
 //@desc Add a template & send Mail
 //@route POST /api/mails/
 //@acess public
 const sendMail = asyncHandler(async (req, res) => {
   try {
+    const template = await new Template();
+    template.subject = req.body.subject;
+    template.description = req.body.description;
+    const savedTemplate = await template.save();
+
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
@@ -23,17 +29,12 @@ const sendMail = asyncHandler(async (req, res) => {
       html: `
       <div>
           ${req.body.description}
-          <img src="" style="display:none"/>
+          <img src="https://ab-email-testing-backend.onrender.com/api/mail/view.png?id=${savedTemplate._id}" style="display:none"/>
       </div>
     `,
     };
     const send = await transporter.sendMail(mailOptions);
-    console.log("Message sent: %s", send.messageId);
 
-    const template = await new Template();
-    template.subject = req.body.subject;
-    template.description = req.body.description;
-    const savedTemplate = await template.save();
     res.json({
       msg: send.messageId,
       template: savedTemplate,
@@ -46,7 +47,7 @@ const sendMail = asyncHandler(async (req, res) => {
 });
 
 //@desc Increase View
-//@droute get /api/mails/:id
+//@droute get /api/mails/view.png?id=
 //@acess public
 const increaseView = asyncHandler(async (req, res) => {
   try {
@@ -63,16 +64,38 @@ const increaseView = asyncHandler(async (req, res) => {
       await data[0].save();
     }
 
-    const template = await Template.findById(req.params.id);
+    const template = await Template.findById(req.query.id);
     if (template) {
-      template.views = template.views;
-      const saved = await template.save();
-      return res.json(saved);
+      template.views = template.views + 1;
+      await template.save();
     }
+
+    const filePath = path.join(path.resolve(), "/public/view.png");
+    res.sendFile(filePath, {}, (err) => {
+      if (err) {
+        res.status(500).send("Something wents wrong");
+      } else {
+        res.status(500).send("Send successfully");
+      }
+    });
   } catch (error) {
     console.log(error);
     res.status(500);
     throw new Error("Server Error");
   }
 });
-export { sendMail, increaseView };
+
+//@desc Increase View
+//@droute get /api/mails/getmax
+//@acess public
+const getMaxViewTime = asyncHandler(async (req, res) => {
+  try {
+    const maxView = await View.find({}).sort({ count: -1 }).limit(1);
+    res.json(maxView[0]);
+  } catch (error) {
+    console.log(error);
+    res.status(500);
+    throw new Error("Server Error");
+  }
+});
+export { sendMail, increaseView, getMaxViewTime };
