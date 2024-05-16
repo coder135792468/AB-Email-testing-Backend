@@ -6,6 +6,7 @@ import { notFound, errorHandler } from "./middlewares/errorMiddleware.js";
 import experimentRoute from "./routes/templateRoute.js";
 import mailRoute from "./routes/mailRoute.js";
 import connectDB from "./utils/db.js";
+import scheduleRoute from "./routes/scheduleRoute.js";
 
 dotenv.config();
 const app = express();
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use("/api/templates", experimentRoute);
 app.use("/api/mail", mailRoute);
+app.use("/api/schedule/mail", scheduleRoute);
 
 app.use(notFound);
 app.use(errorHandler);
